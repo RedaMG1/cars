@@ -104,3 +104,5 @@ En plus des étapes de l'Étape 3, ajoutez les 3 variables de `.env.local`
 dans Vercel : Project → Settings → Environment Variables → collez
 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` et
 `SUPABASE_SERVICE_ROLE_KEY` → redeploy.
+
+<!-- deploy trigger: framework preset fixed to Next.js -->
