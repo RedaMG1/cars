@@ -17,6 +17,32 @@ const KNOWN_TAGS: Record<string, string> = {
   custom: 'Importées',
 }
 
+// Groups a car's free-text model string into a short model-line label
+// (e.g. "A3 Cabriolet", "Classe C") so listings within a brand can be
+// filtered by model, not just by brand.
+function modelFamily(car: DbCar): string {
+  const model = car.model ?? ''
+
+  if (car.brand === 'Audi') {
+    const code =
+      model.match(/\bA\d\b/)?.[0] ??
+      model.match(/\b\d{2,3}\b/)?.[0] ??
+      model.replace(/^Audi\s*/i, '').split(' ')[0] ??
+      'Autre'
+    if (/cabriolet/i.test(model)) return `${code} Cabriolet`
+    if (/sportback/i.test(model)) return `${code} Sportback`
+    return code
+  }
+
+  if (car.brand === 'Mercedes-Benz') {
+    const letter = model.match(/Mercedes-Benz\s+([A-Z])\s?\d/)?.[1] ?? model.match(/\b[A-Z]\b/)?.[0]
+    return letter ? `Classe ${letter}` : 'Autre'
+  }
+
+  const rest = car.brand ? model.replace(new RegExp(`^${car.brand}\\s*`, 'i'), '') : model
+  return rest.split(' ')[0] || model || 'Autre'
+}
+
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: 'note_desc', label: 'Meilleure note' },
   { key: 'price_asc', label: 'Prix ↑' },
@@ -37,6 +63,7 @@ export default function Home() {
   const [cars, setCars] = useState<DbCar[]>([])
   const [loadState, setLoadState] = useState<'loading' | 'ok' | 'error'>('loading')
   const [tab, setTab] = useState<string>('all')
+  const [modelFilter, setModelFilter] = useState<string>('all')
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState<SortKey>('note_desc')
   const [uploading, setUploading] = useState(false)
@@ -77,14 +104,30 @@ export default function Home() {
     }))
   }, [cars])
 
+  const carsInTab = useMemo(() => {
+    return tab === 'favorites'
+      ? cars.filter((c) => favoriteKeys.has(carKey(c)))
+      : tab === 'all'
+        ? cars
+        : cars.filter((c) => c.source_tag === tab)
+  }, [cars, tab, favoriteKeys])
+
+  const models = useMemo(() => {
+    if (tab === 'all' || tab === 'favorites') return []
+    const counts = new Map<string, number>()
+    for (const c of carsInTab) {
+      const key = modelFamily(c)
+      counts.set(key, (counts.get(key) ?? 0) + 1)
+    }
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([key, count]) => ({ key, count }))
+  }, [carsInTab, tab])
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     let data =
-      tab === 'favorites'
-        ? cars.filter((c) => favoriteKeys.has(carKey(c)))
-        : tab === 'all'
-          ? cars
-          : cars.filter((c) => c.source_tag === tab)
+      modelFilter === 'all' ? carsInTab : carsInTab.filter((c) => modelFamily(c) === modelFilter)
 
     if (q) {
       data = data.filter((c) =>
@@ -92,7 +135,7 @@ export default function Home() {
       )
     }
     return [...data].sort(SORTERS[sort])
-  }, [cars, tab, search, sort, favoriteKeys])
+  }, [carsInTab, modelFilter, search, sort])
 
   const onFileChosen = async (file: File) => {
     setError(null)
@@ -113,6 +156,11 @@ export default function Home() {
     } finally {
       setUploading(false)
     }
+  }
+
+  const selectTab = (key: string) => {
+    setTab(key)
+    setModelFilter('all')
   }
 
   const onToggleFavorite = (car: Car) => {
@@ -167,7 +215,7 @@ export default function Home() {
             <button
               type="button"
               className={`tab${tab === 'all' ? ' active' : ''}`}
-              onClick={() => setTab('all')}
+              onClick={() => selectTab('all')}
             >
               Toutes ({cars.length})
             </button>
@@ -176,7 +224,7 @@ export default function Home() {
                 key={t.key}
                 type="button"
                 className={`tab${tab === t.key ? ' active' : ''}`}
-                onClick={() => setTab(t.key)}
+                onClick={() => selectTab(t.key)}
               >
                 {t.label} ({t.count})
               </button>
@@ -184,11 +232,33 @@ export default function Home() {
             <button
               type="button"
               className={`tab${tab === 'favorites' ? ' active' : ''}`}
-              onClick={() => setTab('favorites')}
+              onClick={() => selectTab('favorites')}
             >
               ♥ Favoris ({favoriteKeys.size})
             </button>
           </div>
+
+          {tab !== 'all' && tab !== 'favorites' && models.length > 1 && (
+            <div className="modelRow">
+              <button
+                type="button"
+                className={`modelChip${modelFilter === 'all' ? ' active' : ''}`}
+                onClick={() => setModelFilter('all')}
+              >
+                Tous les modèles ({carsInTab.length})
+              </button>
+              {models.map((m) => (
+                <button
+                  key={m.key}
+                  type="button"
+                  className={`modelChip${modelFilter === m.key ? ' active' : ''}`}
+                  onClick={() => setModelFilter(m.key)}
+                >
+                  {m.key} ({m.count})
+                </button>
+              ))}
+            </div>
+          )}
 
           <StatStrip cars={filtered} />
 
