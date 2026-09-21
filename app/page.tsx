@@ -14,6 +14,8 @@ const KNOWN_TAGS: Record<string, string> = {
   mercedes: 'Mercedes',
   audi: 'Audi',
   audi2: 'Audi fiables',
+  bmw: 'BMW',
+  a5: 'Audi A5',
   custom: 'Importées',
 }
 
@@ -168,6 +170,19 @@ export default function Home() {
     setFavoriteKeys(new Set(updated.map(carKey)))
   }
 
+  const onDeleteCar = async (id: number, code: string) => {
+    const res = await fetch('/api/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, code }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      throw new Error(data.error ?? 'Erreur inconnue lors de la suppression.')
+    }
+    setCars((prev) => prev.filter((c) => c.id !== id))
+  }
+
   return (
     <div className="page">
       <div className="header">
@@ -298,6 +313,7 @@ export default function Home() {
                   car={car}
                   isFavorite={favoriteKeys.has(carKey(car))}
                   onToggleFavorite={onToggleFavorite}
+                  onDelete={onDeleteCar}
                 />
               ))}
             </div>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Car } from '../data/samples'
+import { DbCar } from '../lib/types'
 
 function fmtNum(n?: number) {
   if (n == null) return '—'
@@ -20,14 +21,30 @@ export function CarCard({
   car,
   isFavorite,
   onToggleFavorite,
+  onDelete,
 }: {
-  car: Car
+  car: DbCar
   isFavorite: boolean
   onToggleFavorite: (car: Car) => void
+  onDelete: (id: number, code: string) => Promise<void>
 }) {
   const [imgFailed, setImgFailed] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const priceStr = car.price != null ? fmtNum(car.price) + ' €' : '—'
   const kmStr = car.km != null ? fmtNum(car.km) + ' km' : '—'
+
+  const handleDelete = async () => {
+    const code = window.prompt('Code de suppression :')
+    if (code === null) return
+    setDeleting(true)
+    try {
+      await onDelete(car.id, code)
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : 'Erreur lors de la suppression.')
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   return (
     <div className="card">
@@ -58,6 +75,17 @@ export function CarCard({
           aria-label="Favori"
         >
           {isFavorite ? '♥' : '♡'}
+        </button>
+
+        <button
+          type="button"
+          className="deleteBtn"
+          onClick={handleDelete}
+          disabled={deleting}
+          aria-label="Supprimer"
+          title="Supprimer cette annonce"
+        >
+          {deleting ? '…' : '🗑'}
         </button>
 
         <div className="noteBadge">
