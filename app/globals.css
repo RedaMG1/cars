@@ -195,6 +195,38 @@ body {
 .deleteBtn:hover { background: rgba(200,40,40,0.75); }
 .deleteBtn:disabled { opacity: 0.6; cursor: default; }
 
+.rejectBtn {
+  position: absolute; bottom: 10px; right: 48px; width: 32px; height: 32px; border-radius: 16px;
+  background: rgba(15,23,32,0.55);
+  border: none;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  color: #fff; font-size: 14px;
+}
+.rejectBtn:hover { background: rgba(200,40,40,0.75); }
+.rejectBtn.active { background: rgba(255,59,59,0.85); color: #fff; }
+.rejectBtn:disabled { opacity: 0.6; cursor: default; }
+
+.photoWrap.rejected .photo { opacity: 0.5; filter: grayscale(70%); }
+.rejectOverlay {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  pointer-events: none;
+  filter: drop-shadow(0 0 2px rgba(0,0,0,0.7));
+}
+
+.tabGroup { display: flex; align-items: center; gap: 3px; }
+.tabAction {
+  width: 20px; height: 20px; border-radius: 999px;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--text-dim);
+  font-size: 10px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+.tabAction:hover { border-color: var(--accent); color: var(--accent2); }
+
 .noteBadge {
   position: absolute; top: 10px; right: 10px;
   background: rgba(15,23,32,0.65);

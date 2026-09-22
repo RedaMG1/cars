@@ -183,6 +183,78 @@ export default function Home() {
     setCars((prev) => prev.filter((c) => c.id !== id))
   }
 
+  const onToggleReject = async (id: number, rejected: boolean) => {
+    const res = await fetch('/api/reject', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, rejected }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      throw new Error(data.error ?? 'Erreur inconnue.')
+    }
+    setCars((prev) => prev.map((c) => (c.id === id ? { ...c, rejected } : c)))
+  }
+
+  const retagCategory = async (from: string, to: string) => {
+    const res = await fetch('/api/category', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from, to }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      throw new Error(data.error ?? 'Erreur inconnue.')
+    }
+    setCars((prev) => prev.map((c) => (c.source_tag === from ? { ...c, source_tag: to } : c)))
+    if (tab === from) setTab(to)
+  }
+
+  const onRenameCategory = async (t: { key: string; label: string; count: number }) => {
+    const input = window.prompt(`Nouveau nom pour la catégorie « ${t.label} » :`, t.label)
+    if (input === null) return
+    const newName = input.trim()
+    if (!newName || newName === t.key) return
+    try {
+      await retagCategory(t.key, newName)
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : 'Erreur lors du renommage.')
+    }
+  }
+
+  const onMergeCategory = async (t: { key: string; label: string; count: number }) => {
+    const others = tabs.filter((o) => o.key !== t.key)
+    if (others.length === 0) {
+      window.alert("Il n'y a aucune autre catégorie dans laquelle fusionner.")
+      return
+    }
+    const choices = others.map((o) => o.label).join(', ')
+    const input = window.prompt(
+      `Fusionner « ${t.label} » dans quelle catégorie ? Tapez exactement l'un de : ${choices}`,
+    )
+    if (input === null) return
+    const typed = input.trim().toLowerCase()
+    const target = others.find(
+      (o) => o.label.toLowerCase() === typed || o.key.toLowerCase() === typed,
+    )
+    if (!target) {
+      window.alert("Catégorie inconnue — copiez exactement l'un des noms proposés.")
+      return
+    }
+    if (
+      !window.confirm(
+        `Déplacer les ${t.count} annonce(s) de « ${t.label} » vers « ${target.label} » ?`,
+      )
+    ) {
+      return
+    }
+    try {
+      await retagCategory(t.key, target.key)
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : 'Erreur lors de la fusion.')
+    }
+  }
+
   return (
     <div className="page">
       <div className="header">
@@ -235,14 +307,33 @@ export default function Home() {
               Toutes ({cars.length})
             </button>
             {tabs.map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                className={`tab${tab === t.key ? ' active' : ''}`}
-                onClick={() => selectTab(t.key)}
-              >
-                {t.label} ({t.count})
-              </button>
+              <div key={t.key} className="tabGroup">
+                <button
+                  type="button"
+                  className={`tab${tab === t.key ? ' active' : ''}`}
+                  onClick={() => selectTab(t.key)}
+                >
+                  {t.label} ({t.count})
+                </button>
+                <button
+                  type="button"
+                  className="tabAction"
+                  onClick={() => onRenameCategory(t)}
+                  title="Renommer cette catégorie"
+                  aria-label="Renommer cette catégorie"
+                >
+                  ✎
+                </button>
+                <button
+                  type="button"
+                  className="tabAction"
+                  onClick={() => onMergeCategory(t)}
+                  title="Fusionner dans une autre catégorie"
+                  aria-label="Fusionner dans une autre catégorie"
+                >
+                  ⇄
+                </button>
+              </div>
             ))}
             <button
               type="button"
@@ -314,6 +405,7 @@ export default function Home() {
                   isFavorite={favoriteKeys.has(carKey(car))}
                   onToggleFavorite={onToggleFavorite}
                   onDelete={onDeleteCar}
+                  onToggleReject={onToggleReject}
                 />
               ))}
             </div>

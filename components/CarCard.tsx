@@ -22,14 +22,17 @@ export function CarCard({
   isFavorite,
   onToggleFavorite,
   onDelete,
+  onToggleReject,
 }: {
   car: DbCar
   isFavorite: boolean
   onToggleFavorite: (car: Car) => void
   onDelete: (id: number, code: string) => Promise<void>
+  onToggleReject: (id: number, rejected: boolean) => Promise<void>
 }) {
   const [imgFailed, setImgFailed] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [rejecting, setRejecting] = useState(false)
   const priceStr = car.price != null ? fmtNum(car.price) + ' €' : '—'
   const kmStr = car.km != null ? fmtNum(car.km) + ' km' : '—'
 
@@ -46,9 +49,20 @@ export function CarCard({
     }
   }
 
+  const handleToggleReject = async () => {
+    setRejecting(true)
+    try {
+      await onToggleReject(car.id, !car.rejected)
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : 'Erreur.')
+    } finally {
+      setRejecting(false)
+    }
+  }
+
   return (
     <div className="card">
-      <div className="photoWrap">
+      <div className={`photoWrap${car.rejected ? ' rejected' : ''}`}>
         {car.img && !imgFailed ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -68,6 +82,13 @@ export function CarCard({
           </div>
         )}
 
+        {car.rejected && (
+          <svg className="rejectOverlay" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            <line x1="3" y1="3" x2="97" y2="97" stroke="#ff3b3b" strokeWidth="4" strokeLinecap="round" />
+            <line x1="97" y1="3" x2="3" y2="97" stroke="#ff3b3b" strokeWidth="4" strokeLinecap="round" />
+          </svg>
+        )}
+
         <button
           type="button"
           className={`favoriteBtn${isFavorite ? ' active' : ''}`}
@@ -75,6 +96,17 @@ export function CarCard({
           aria-label="Favori"
         >
           {isFavorite ? '♥' : '♡'}
+        </button>
+
+        <button
+          type="button"
+          className={`rejectBtn${car.rejected ? ' active' : ''}`}
+          onClick={handleToggleReject}
+          disabled={rejecting}
+          aria-label={car.rejected ? 'Annuler le rejet' : 'Marquer comme rejetée'}
+          title={car.rejected ? 'Annuler le rejet' : 'Marquer cette annonce comme rejetée'}
+        >
+          {rejecting ? '…' : '✕'}
         </button>
 
         <button

@@ -5,4 +5,5 @@ import { Car } from '../data/samples'
 export type DbCar = Car & {
   id: number
   source_tag: string
+  rejected: boolean
 }

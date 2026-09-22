@@ -17,6 +17,7 @@ create table if not exists cars (
   url text,
   img text,
   source_tag text not null default 'custom',
+  rejected boolean not null default false,
   created_at timestamptz not null default now()
 );
 
